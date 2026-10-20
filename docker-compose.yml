@@ -1,5 +1,5 @@
-# Demo:  ENV_FILE=.env.demo docker compose -p everus-demo up -d --build
-# Live:  ENV_FILE=.env.live docker compose -p everus-live up -d --build   (put Caddy/Nginx with TLS in front)
+# Demo:  ENV_FILE=.env.demo docker compose -p u2us-demo up -d --build
+# Live:  ENV_FILE=.env.live docker compose -p u2us-live up -d --build   (put Caddy/Nginx with TLS in front)
 services:
   app:
     build: .

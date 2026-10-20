@@ -6,16 +6,16 @@ jobs:
     services:
       mysql:
         image: mysql:8.0
-        env: {MYSQL_ROOT_PASSWORD: root, MYSQL_DATABASE: everus}
+        env: {MYSQL_ROOT_PASSWORD: root, MYSQL_DATABASE: u2us}
         ports: ["3306:3306"]
         options: --health-cmd="mysqladmin ping" --health-interval=5s --health-retries=20
-    env: {DB_HOST: 127.0.0.1, DB_USER: root, DB_PASS: root, DB_NAME: everus}
+    env: {DB_HOST: 127.0.0.1, DB_USER: root, DB_PASS: root, DB_NAME: u2us}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with: {node-version: 20}
       - run: npm install
-      - run: mysql -h127.0.0.1 -uroot -proot everus < schema.sql
+      - run: mysql -h127.0.0.1 -uroot -proot u2us < schema.sql
       - run: npm test
       - run: npm audit --omit=dev --audit-level=high
       - name: Start app + OWASP ZAP baseline (dynamic security scan)

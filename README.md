@@ -1,9 +1,9 @@
-# EverUs — dating with true intention
+# U2Us — dating with true intention
 Node/Express + MySQL 8, responsive gradient web UI (works on phones, tablets, laptops; installable PWA manifest).
 
 ## Run locally
     npm install && cp .env.example .env   # set DB_*, DATA_KEY, JWT_SECRET, DB_HOST=127.0.0.1
-    mysql -u root -p everus < schema.sql && npm start     # http://localhost:3000
+    mysql -u root -p u2us < schema.sql && npm start     # http://localhost:3000
     npm test                                             # API + security tests (needs MySQL)
     BASE=http://localhost:3000 npm run load              # k6 load test (p95 < 500ms gate)
 
