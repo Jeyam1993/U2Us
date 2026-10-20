@@ -2,8 +2,9 @@ require('dotenv').config();
 const express=require('express'),helmet=require('helmet'),rate=require('express-rate-limit'),bcrypt=require('bcryptjs'),jwt=require('jsonwebtoken'),{z}=require('zod'),
 prom=require('prom-client'),pino=require('pino-http'),db=require('./db'),{enc,dec,hid,mask}=require('./sec'),{worker}=require('./notify'),E=process.env;
 const SECRET=E.JWT_SECRET||'dev-only-secret-change-me-dev-only-secret',app=express();
+const HTTPS=E.FORCE_HTTPS==='1',HELM={hsts:HTTPS,contentSecurityPolicy:{useDefaults:true,directives:{'upgrade-insecure-requests':HTTPS?[]:null}}};
 app.set('trust proxy',1);app.disable('x-powered-by');
-app.use(helmet(),express.json({limit:'10kb'}),pino({enabled:process.env.NODE_ENV!=='test',quietReqLogger:true,redact:['req.headers.authorization','req.body']}));
+app.use(helmet(HELM),express.json({limit:'10kb'}),pino({enabled:process.env.NODE_ENV!=='test',quietReqLogger:true,redact:['req.headers.authorization','req.body']}));
 prom.collectDefaultMetrics();
 const lat=new prom.Histogram({name:'http_request_seconds',help:'latency',labelNames:['method','route','status'],buckets:[.025,.05,.1,.25,.5,1,2,5]});
 app.use((q,s,n)=>{const e=lat.startTimer();s.on('finish',()=>e({method:q.method,route:q.route?.path||'static',status:s.statusCode}));n()});
