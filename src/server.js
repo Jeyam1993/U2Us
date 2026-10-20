@@ -42,4 +42,4 @@ app.get('/owner/stats',owner,async(_,s)=>{const[[a]]=await db.query('SELECT COUN
 app.use(express.static('public',{maxAge:'1h'}));
 app.use((e,q,s,n)=>{q.log?.error(e.message);s.status(e.status||500).json({error:'Something went wrong.'})});
 module.exports=app;
-if(require.main===module){worker();app.listen(+E.PORT||3000,()=>console.log('U2Us Sathi up on',E.PORT||3000))}
+if(require.main===module){worker();app.listen(+E.PORT||3000,()=>console.log('U2Us up on',E.PORT||3000))}
