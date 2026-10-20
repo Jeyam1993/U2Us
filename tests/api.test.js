@@ -1,0 +1,14 @@
+process.env.AUTH_LIMIT='1000';process.env.OWNER_TOKEN='t';
+const rq=require('supertest'),app=require('../src/server'),db=require('../src/db');
+const u=()=>({name:'Asha Rao',email:`a${Date.now()}${Math.random().toString(36).slice(2,6)}@test.com`,phone:'+919876543210',password:'LongPass#2026',age:28,intent:'marriage',consent:true});
+afterAll(()=>db.end());
+test('health',async()=>{expect((await rq(app).get('/health')).body.ok).toBe(true)});
+test('register -> summary masked, 3 notifications queued',async()=>{const b=u(),r=await rq(app).post('/api/register').send(b);expect(r.status).toBe(201);
+ const s=await rq(app).get('/api/summary').set('Authorization','Bearer '+r.body.token);expect(s.body.notifications).toHaveLength(3);expect(s.body.email).not.toBe(b.email);expect(JSON.stringify(s.body)).not.toContain(b.phone)});
+test('duplicate email rejected',async()=>{const b=u();await rq(app).post('/api/register').send(b);expect((await rq(app).post('/api/register').send(b)).status).toBe(409)});
+test.each([[{age:17}],[{phone:'9876'}],[{password:'short'}],[{consent:false}],[{email:"x'; DROP TABLE users;--@a.com"}]])('invalid %j rejected',async o=>{expect((await rq(app).post('/api/register').send({...u(),...o})).status).toBe(400)});
+test('summary needs auth',async()=>{expect((await rq(app).get('/api/summary')).status).toBe(401)});
+test('login wrong password 401, right 200',async()=>{const b=u();await rq(app).post('/api/register').send(b);
+ expect((await rq(app).post('/api/login').send({email:b.email,password:'wrong-pass-123'})).status).toBe(401);expect((await rq(app).post('/api/login').send({email:b.email,password:b.password})).status).toBe(200)});
+test('owner routes hidden without token',async()=>{expect((await rq(app).get('/metrics')).status).toBe(404);expect((await rq(app).get('/owner/stats').set('x-owner-token','t')).status).toBe(200)});
+test('security headers set',async()=>{const r=await rq(app).get('/health');expect(r.headers['content-security-policy']).toBeDefined();expect(r.headers['x-powered-by']).toBeUndefined()});

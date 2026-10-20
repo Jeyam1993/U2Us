@@ -1,0 +1,15 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Sathi</title><meta name="theme-color" content="#5b2a86"><link rel="manifest" href="manifest.json"><link rel="stylesheet" href="style.css"></head>
+<body><main>
+<header><h1>Sathi</h1><p>Slow, honest connection. Intent first, contact later.</p></header>
+<section id="reg"><form id="f" novalidate>
+<label>Full name<input name="name" autocomplete="name" required></label>
+<label>Email<input name="email" type="email" autocomplete="email" required></label>
+<label>Mobile (with country code)<input name="phone" type="tel" placeholder="+919876543210" autocomplete="tel" required></label>
+<div class="row"><label>Age<input name="age" type="number" min="18" max="99" required></label>
+<label>What are you looking for?<select name="intent"><option value="marriage">Marriage</option><option value="long_term">A long-term partner</option><option value="friendship_first">Friendship first</option></select></label></div>
+<label>Password (10+ characters)<input name="password" type="password" minlength="10" autocomplete="new-password" required></label>
+<label class="chk"><input name="consent" type="checkbox"> I am 18 or older and agree to my details being stored securely.</label>
+<p id="err" role="alert"></p><button id="go">Create my profile</button></form></section>
+<section id="sum" hidden><h2>You're registered</h2><dl id="sd"></dl><h3>Confirmations</h3><ul id="nl"></ul></section>
+</main><script src="app.js"></script></body></html>

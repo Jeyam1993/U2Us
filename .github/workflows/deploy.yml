@@ -1,0 +1,14 @@
+# demo branch -> Demo environment (auto). main branch -> Live environment (waits for your approval).
+# In GitHub: Settings > Environments > create "demo" and "live"; on "live" add yourself as Required reviewer.
+name: deploy
+on:
+  push:
+    branches: [demo, main]
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment: ${{ github.ref_name == 'main' && 'live' || 'demo' }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Deploy over SSH (fill in secrets HOST, SSH_USER, SSH_KEY in each environment)
+        run: echo "Deploying ${{ github.ref_name }} -> ${{ github.ref_name == 'main' && 'LIVE' || 'DEMO' }}; add your ssh + 'docker compose up -d --build' step here"

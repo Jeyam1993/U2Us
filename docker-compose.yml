@@ -1,0 +1,17 @@
+# Demo:  ENV_FILE=.env.demo docker compose -p sathi-demo up -d --build
+# Live:  ENV_FILE=.env.live docker compose -p sathi-live up -d --build   (put Caddy/Nginx with TLS in front)
+services:
+  app:
+    build: .
+    env_file: ${ENV_FILE:-.env.demo}
+    ports: ["${PORT:-3000}:3000"]
+    depends_on: {db: {condition: service_healthy}}
+    restart: unless-stopped
+  db:
+    image: mysql:8.0
+    env_file: ${ENV_FILE:-.env.demo}
+    environment: {MYSQL_DATABASE: "${DB_NAME}", MYSQL_USER: "${DB_USER}", MYSQL_PASSWORD: "${DB_PASS}"}
+    volumes: [dbdata:/var/lib/mysql, ./schema.sql:/docker-entrypoint-initdb.d/schema.sql:ro]
+    healthcheck: {test: ["CMD","mysqladmin","ping","-h","localhost"], interval: 5s, retries: 20}
+    restart: unless-stopped
+volumes: {dbdata: {}}
