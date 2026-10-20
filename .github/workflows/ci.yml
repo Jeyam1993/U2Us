@@ -1,5 +1,6 @@
 name: ci
 on: [push, pull_request]
+env: {DB_HOST: 127.0.0.1, DB_USER: root, DB_PASS: root, DB_NAME: u2us}
 jobs:
   test:
     runs-on: ubuntu-latest
@@ -9,7 +10,6 @@ jobs:
         env: {MYSQL_ROOT_PASSWORD: root, MYSQL_DATABASE: u2us}
         ports: ["3306:3306"]
         options: --health-cmd="mysqladmin ping" --health-interval=5s --health-retries=20
-    env: {DB_HOST: 127.0.0.1, DB_USER: root, DB_PASS: root, DB_NAME: u2us}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -18,7 +18,28 @@ jobs:
       - run: mysql -h127.0.0.1 -uroot -proot u2us < schema.sql
       - run: npm test
       - run: npm audit --omit=dev --audit-level=high
-      - name: Start app + OWASP ZAP baseline (dynamic security scan)
+      - name: OWASP ZAP baseline scan (report is uploaded; warnings do not fail the build)
         run: |
           node src/server.js & sleep 4
-          docker run --network host -v $PWD:/zap/wrk ghcr.io/zaproxy/zaproxy:stable zap-baseline.py -t http://localhost:3000 -I
+          chmod a+w . && docker run --network host -v $PWD:/zap/wrk:rw ghcr.io/zaproxy/zaproxy:stable zap-baseline.py -t http://localhost:3000 -r zap-report.html -I
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with: {name: zap-report, path: zap-report.html}
+  e2e:
+    runs-on: ubuntu-latest
+    services:
+      mysql:
+        image: mysql:8.0
+        env: {MYSQL_ROOT_PASSWORD: root, MYSQL_DATABASE: u2us}
+        ports: ["3306:3306"]
+        options: --health-cmd="mysqladmin ping" --health-interval=5s --health-retries=20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: {node-version: 20}
+      - run: npm install && npx playwright install --with-deps
+      - run: mysql -h127.0.0.1 -uroot -proot u2us < schema.sql
+      - run: npx playwright test
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with: {name: playwright-report-and-screenshots, path: "playwright-report\ntest-results"}

@@ -24,3 +24,9 @@ bcrypt passwords · AES-256-GCM encrypted email/phone at rest · HMAC email look
 `curl -H "x-owner-token: $T" host/owner/stats` → users, 24h signups, notification failures, failed logins/hour.
 `/metrics` → Prometheus (latency histogram per route, CPU, memory); add Grafana + alert on p95 > 500ms, 5xx > 1%, `failed` notifications > 0, `/health` down (UptimeRobot).
 Speed under load: DB pool (`DB_POOL`), notifications run in a background queue so signup stays fast, indexed queries. Scale: run N app containers behind the proxy; MySQL slow-query log on.
+
+## Free testing toolkit
+- **Email (Brevo free, 300/day):** put the SMTP lines from `.env.example` in `.env`, then `npm run notify:test -- email you@gmail.com`.
+- **WhatsApp (Meta free test number):** Meta for Developers > create app > WhatsApp > API Setup. Copy the *Phone number ID* to `WA_PHONE_ID`, add your own number under *To > Manage phone number list*, and use a System User token for `WA_TOKEN` (the dashboard token expires fast). Then `npm run notify:test -- whatsapp +91XXXXXXXXXX`. Only allow-listed numbers receive messages until your business is verified. After that, register your own template and set `WA_TEMPLATE`.
+- **Screens on phone/laptop sizes:** `npx playwright install` once, then `npm run e2e` (Android, iPhone, iPad, Chrome, Firefox). Screenshots land in `test-results/`; report: `npx playwright show-report`.
+- **ZAP:** runs on every push in GitHub Actions; download the `zap-report` artifact. Local: `docker run --network host -v $PWD:/zap/wrk:rw ghcr.io/zaproxy/zaproxy:stable zap-baseline.py -t http://localhost:3000 -r zap-report.html`.
