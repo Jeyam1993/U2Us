@@ -30,3 +30,8 @@ Speed under load: DB pool (`DB_POOL`), notifications run in a background queue s
 - **WhatsApp (Meta free test number):** Meta for Developers > create app > WhatsApp > API Setup. Copy the *Phone number ID* to `WA_PHONE_ID`, add your own number under *To > Manage phone number list*, and use a System User token for `WA_TOKEN` (the dashboard token expires fast). Then `npm run notify:test -- whatsapp +91XXXXXXXXXX`. Only allow-listed numbers receive messages until your business is verified. After that, register your own template and set `WA_TEMPLATE`.
 - **Screens on phone/laptop sizes:** `npx playwright install` once, then `npm run e2e` (Android, iPhone, iPad, Chrome, Firefox). Screenshots land in `test-results/`; report: `npx playwright show-report`.
 - **ZAP:** runs on every push in GitHub Actions; download the `zap-report` artifact. Local: `docker run --network host -v $PWD:/zap/wrk:rw ghcr.io/zaproxy/zaproxy:stable zap-baseline.py -t http://localhost:3000 -r zap-report.html`.
+
+## Roles, demo profiles, admin
+Existing database? Run once: `mysql -u root -p u2us -e "source migrations/002_roles_status.sql"`.
+- `npm run seed:demo` adds 10 demo profiles (login demo01@u2us.test ... demo10@u2us.test, password `Demo#Pass2026`; refuses to run in production).
+- `npm run admin:create -- you@example.com "LongPassword#1"` makes your admin account. Sign in via POST /api/login, then use /api/admin/users, /api/admin/users/:id/suspend and /reinstate.

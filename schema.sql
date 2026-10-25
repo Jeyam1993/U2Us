@@ -7,6 +7,8 @@ CREATE TABLE IF NOT EXISTS users(
  age TINYINT UNSIGNED NOT NULL,
  intent ENUM('marriage','long_term','friendship_first') NOT NULL,
  pass_hash VARCHAR(100) NOT NULL,          -- bcrypt
+ role ENUM('user','admin') NOT NULL DEFAULT 'user',
+ status ENUM('active','suspended') NOT NULL DEFAULT 'active',
  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP) ENGINE=InnoDB;
 CREATE TABLE IF NOT EXISTS notifications(
  id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,

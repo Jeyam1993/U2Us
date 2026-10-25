@@ -1,5 +1,5 @@
 process.env.AUTH_LIMIT='1000';process.env.OWNER_TOKEN='t';
-const rq=require('supertest'),app=require('../src/server'),db=require('../src/db');
+const rq=require('supertest'),app=require('../src/server'),db=require('../src/db'),{hid}=require('../src/sec');
 const u=()=>({name:'Asha Rao',email:`a${Date.now()}${Math.random().toString(36).slice(2,6)}@test.com`,phone:'+919876543210',password:'LongPass#2026',age:28,intent:'marriage',consent:true});
 afterAll(()=>db.end());
 test('health',async()=>{expect((await rq(app).get('/health')).body.ok).toBe(true)});
@@ -12,3 +12,13 @@ test('login wrong password 401, right 200',async()=>{const b=u();await rq(app).p
  expect((await rq(app).post('/api/login').send({email:b.email,password:'wrong-pass-123'})).status).toBe(401);expect((await rq(app).post('/api/login').send({email:b.email,password:b.password})).status).toBe(200)});
 test('owner routes hidden without token',async()=>{expect((await rq(app).get('/metrics')).status).toBe(404);expect((await rq(app).get('/owner/stats').set('x-owner-token','t')).status).toBe(200)});
 test('security headers set',async()=>{const r=await rq(app).get('/health');expect(r.headers['content-security-policy']).toBeDefined();expect(r.headers['x-powered-by']).toBeUndefined()});
+
+test('admin API: normal user blocked, admin allowed (masked data), suspend blocks login and old token',async()=>{
+ const a=u(),b=u(),ra=await rq(app).post('/api/register').send(a),rb=await rq(app).post('/api/register').send(b),H=t=>({Authorization:'Bearer '+t});
+ expect((await rq(app).get('/api/admin/users').set(H(rb.body.token))).status).toBe(403);
+ await db.query("UPDATE users SET role='admin' WHERE email_hash=?",[hid(a.email)]);
+ const l=await rq(app).get('/api/admin/users').set(H(ra.body.token));expect(l.status).toBe(200);expect(JSON.stringify(l.body)).not.toContain(b.email);
+ const[[row]]=await db.query('SELECT id FROM users WHERE email_hash=?',[hid(b.email)]);
+ expect((await rq(app).post(`/api/admin/users/${row.id}/suspend`).set(H(ra.body.token))).status).toBe(200);
+ expect((await rq(app).post('/api/login').send({email:b.email,password:b.password})).status).toBe(403);
+ expect((await rq(app).get('/api/summary').set(H(rb.body.token))).status).toBe(401)});

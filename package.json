@@ -10,7 +10,9 @@
   "test": "jest --runInBand --forceExit",
   "load": "k6 run tests/load.k6.js",
   "e2e": "playwright test",
-  "notify:test": "node scripts/test-notify.js"
+  "notify:test": "node scripts/test-notify.js",
+  "seed:demo": "node scripts/seed-demo.js",
+  "admin:create": "node scripts/create-admin.js"
  },
  "dependencies": {
   "bcryptjs": "^2.4.3",

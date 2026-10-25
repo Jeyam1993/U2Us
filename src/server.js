@@ -12,7 +12,9 @@ app.use(rate({windowMs:60000,limit:+E.GLOBAL_LIMIT||300}));
 const auth_rl=rate({windowMs:15*60000,limit:+E.AUTH_LIMIT||10,message:{error:'Too many attempts. Try again later.'}});
 const sign=id=>jwt.sign({id},SECRET,{expiresIn:'2h'});
 const audit=(id,a,ip)=>db.query('INSERT INTO audit_log(user_id,action,ip) VALUES(?,?,?)',[id,a,ip]).catch(()=>{});
-const need=(q,s,n)=>{try{q.uid=jwt.verify((q.headers.authorization||'').replace('Bearer ',''),SECRET).id;n()}catch{s.status(401).json({error:'Please sign in again.'})}};
+const need=async(q,s,n)=>{try{q.uid=jwt.verify((q.headers.authorization||'').replace('Bearer ',''),SECRET).id;
+ const[[u]]=await db.query('SELECT status FROM users WHERE id=?',[q.uid]);if(u&&u.status==='active')return n()}catch{}s.status(401).json({error:'Please sign in again.'})};
+const staff=async(q,s,n)=>{try{const[[u]]=await db.query('SELECT role FROM users WHERE id=?',[q.uid]);if(u&&u.role==='admin')return n()}catch{}s.sendStatus(403)};
 const Reg=z.object({name:z.string().trim().min(2).max(80),email:z.string().trim().email().max(120),phone:z.string().regex(/^\+[1-9]\d{9,14}$/,'Use international format, e.g. +919876543210'),
  password:z.string().min(10).max(72),age:z.number({invalid_type_error:'Enter your age'}).int().min(18,'You must be 18 or older').max(99),intent:z.enum(['marriage','long_term','friendship_first']),consent:z.literal(true,{errorMap:()=>({message:'Consent is required'})})});
 app.post('/api/register',auth_rl,async(q,s)=>{
@@ -27,13 +29,21 @@ app.post('/api/register',auth_rl,async(q,s)=>{
   q.log.error(e.message);s.status(500).json({error:'Something went wrong. Please try again.'})}finally{conn.release()}});
 app.post('/api/login',auth_rl,async(q,s)=>{
  const p=z.object({email:z.string().email(),password:z.string().max(72)}).safeParse(q.body);if(!p.success)return s.status(400).json({error:'Invalid details.'});
- const[[u]]=await db.query('SELECT id,pass_hash FROM users WHERE email_hash=?',[hid(p.data.email)]);
+ const[[u]]=await db.query('SELECT id,pass_hash,status FROM users WHERE email_hash=?',[hid(p.data.email)]);
  if(!u||!await bcrypt.compare(p.data.password,u.pass_hash)){audit(null,'login_fail',q.ip);return s.status(401).json({error:'Email or password is incorrect.'})}
- audit(u.id,'login',q.ip);s.json({token:sign(u.id)})});
+ if(u.status!=='active')return s.status(403).json({error:'This account is suspended. Contact support.'});audit(u.id,'login',q.ip);s.json({token:sign(u.id)})});
 app.get('/api/summary',need,async(q,s)=>{
  const[[u]]=await db.query('SELECT name,age,intent,email_enc,phone_enc,created_at FROM users WHERE id=?',[q.uid]);if(!u)return s.status(404).json({error:'Not found'});
  const[n]=await db.query('SELECT channel,status FROM notifications WHERE user_id=?',[q.uid]);
  s.json({name:u.name,age:u.age,intent:u.intent,email:mask(dec(u.email_enc)),phone:mask(dec(u.phone_enc),3),registeredAt:u.created_at,notifications:n})});
+// ---- Admin API (role checked in the database on every call; admins see masked contact details only)
+app.get('/api/admin/users',need,staff,async(q,s)=>{const lim=Math.min(+q.query.limit||50,200),off=Math.max(+q.query.offset||0,0);
+ const[r]=await db.query('SELECT id,name,age,intent,role,status,email_enc,phone_enc,created_at FROM users ORDER BY id DESC LIMIT ? OFFSET ?',[lim,off]);
+ s.json(r.map(u=>({id:u.id,name:u.name,age:u.age,intent:u.intent,role:u.role,status:u.status,email:mask(dec(u.email_enc)),phone:mask(dec(u.phone_enc),3),createdAt:u.created_at})))});
+const setStatus=st=>async(q,s)=>{const id=+q.params.id;if(!Number.isInteger(id))return s.sendStatus(400);
+ const[r]=await db.query("UPDATE users SET status=? WHERE id=? AND role<>'admin'",[st,id]);if(!r.affectedRows)return s.sendStatus(404);audit(q.uid,`admin_${st}:${id}`,q.ip);s.json({ok:true})};
+app.post('/api/admin/users/:id/suspend',need,staff,setStatus('suspended'));
+app.post('/api/admin/users/:id/reinstate',need,staff,setStatus('active'));
 app.get('/health',async(_,s)=>{try{await db.query('SELECT 1');s.json({ok:true})}catch{s.status(503).json({ok:false})}});
 const owner=(q,s,n)=>E.OWNER_TOKEN&&q.headers['x-owner-token']===E.OWNER_TOKEN?n():s.sendStatus(404);
 app.get('/metrics',owner,async(_,s)=>s.type(prom.register.contentType).send(await prom.register.metrics()));
@@ -43,4 +53,4 @@ app.get('/owner/stats',owner,async(_,s)=>{const[[a]]=await db.query('SELECT COUN
 app.use(express.static('public',{maxAge:'1h'}));
 app.use((e,q,s,n)=>{q.log?.error(e.message);s.status(e.status||500).json({error:'Something went wrong.'})});
 module.exports=app;
-if(require.main===module){worker();app.listen(+E.PORT||3000,()=>console.log('U2Us up on',E.PORT||3000))}
+if(require.main===module){process.on('unhandledRejection',e=>console.error('unhandled',e.message));worker();app.listen(+E.PORT||3000,()=>console.log('U2Us up on',E.PORT||3000))}
